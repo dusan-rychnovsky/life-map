@@ -35,4 +35,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-tarpaulin
-      - run: cargo tarpaulin --ignore-tests
+      - run: cargo tarpaulin --ignore-tests --exclude-files src/main.rs --fail-under 95
