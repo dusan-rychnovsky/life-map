@@ -1,3 +1,4 @@
+use life_map::startup::run;
 use std::net::TcpListener;
 
 #[tokio::test]
@@ -62,7 +63,7 @@ async fn create_task_returns_400_when_data_is_missing() {
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind a random port.");
     let port = listener.local_addr().unwrap().port();
-    let server = life_map::run(listener).expect("Failed to bind address.");
+    let server = run(listener).expect("Failed to bind address.");
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
 }

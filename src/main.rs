@@ -1,4 +1,4 @@
-use life_map::run;
+use life_map::startup::run;
 use std::net::TcpListener;
 
 #[tokio::main]
