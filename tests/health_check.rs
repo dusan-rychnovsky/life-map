@@ -1,7 +1,8 @@
-use life_map::configuration::get_configuration;
+use life_map::configuration::{DatabaseSettings, get_configuration};
 use life_map::startup::run;
-use sqlx::PgPool;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn health_check_returns_200() {
@@ -80,10 +81,9 @@ async fn spawn_app() -> TestApp {
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
 
-    let config = get_configuration().expect("Failed to read configuration.");
-    let connection_pool = PgPool::connect(&config.database.connection_string())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let mut config = get_configuration().expect("Failed to read configuration.");
+    config.database.database_name = Uuid::new_v4().to_string();
+    let connection_pool = configure_db(&config.database).await;
 
     let server = run(listener, connection_pool.clone()).expect("Failed to bind address.");
     let _ = tokio::spawn(server);
@@ -91,4 +91,24 @@ async fn spawn_app() -> TestApp {
         address,
         db_pool: connection_pool,
     }
+}
+
+pub async fn configure_db(config: &DatabaseSettings) -> PgPool {
+    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+        .await
+        .expect("Failed to connect to Postgres.");
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
+        .await
+        .expect("Failed to create database.");
+
+    let connection_pool = PgPool::connect(&config.connection_string_with_db())
+        .await
+        .expect("Failed to connect to Postgres.");
+    sqlx::migrate!("./migrations")
+        .run(&connection_pool)
+        .await
+        .expect("Failed to migrate the database");
+
+    connection_pool
 }
