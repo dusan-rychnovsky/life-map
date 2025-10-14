@@ -10,24 +10,37 @@ pub struct FormData {
     description: String,
 }
 
+#[tracing::instrument(
+  name = "Creating a new task.",
+  skip(form, pool),
+  fields(
+    task_title= %form.title
+  )
+)]
 pub async fn create_task(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    match sqlx::query!(
+    match insert_task(&pool, &form).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[tracing::instrument(name = "Saving a new task in the database.", skip(form, pool))]
+pub async fn insert_task(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
-        INSERT INTO tasks(id, title, description, created_at)
-        VALUES($1,$2,$3,$4)
-        "#,
+      INSERT INTO tasks(id, title, description, created_at)
+      VALUES($1,$2,$3,$4)
+    "#,
         Uuid::new_v4(),
         form.title,
         form.description,
         Utc::now()
     )
-    .execute(pool.as_ref())
+    .execute(pool)
     .await
-    {
-        Err(e) => {
-            eprintln!("Failed to execute query: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-        Ok(_) => HttpResponse::Ok().finish(),
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
