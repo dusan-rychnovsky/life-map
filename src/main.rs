@@ -1,9 +1,9 @@
 use life_map::configuration::get_configuration;
 use life_map::startup::run;
 use life_map::telemetry::{get_subscriber, init_subscriber};
-use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -11,10 +11,18 @@ async fn main() -> std::io::Result<()> {
     init_subscriber(subscriber);
 
     let config = get_configuration().expect("Failed to read configuration.");
-    let connection_pool =
-        PgPool::connect(config.database.connection_string_with_db().expose_secret())
-            .await
-            .expect("Failed to connect to Postgres.");
+    tracing::info!(
+        "Attempting to connect to PostgreSQL at {}:{} as user {} to database {}",
+        config.database.host,
+        config.database.port,
+        config.database.username,
+        config.database.database_name
+    );
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(Duration::from_secs(30))
+        .connect_with(config.database.with_db())
+        .await
+        .expect("Failed to connect to Postgres.");
     let address = format!("{}:{}", config.application.host, config.application.port);
     let listener = TcpListener::bind(address)?;
     run(listener, connection_pool)?.await
