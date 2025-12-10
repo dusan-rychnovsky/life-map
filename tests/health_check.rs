@@ -22,7 +22,7 @@ async fn health_check_returns_200() {
 }
 
 #[tokio::test]
-async fn create_task_returns_200_for_valid_form_data() {
+async fn create_task_when_valid_form_data_then_returns_200() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
 
@@ -47,7 +47,7 @@ async fn create_task_returns_200_for_valid_form_data() {
 }
 
 #[tokio::test]
-async fn create_task_returns_400_when_data_is_missing() {
+async fn create_task_when_fields_are_missing_then_returns_400() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
 
@@ -69,6 +69,32 @@ async fn create_task_returns_400_when_data_is_missing() {
             response.status().as_u16(),
             "The API did not fail with 400 Bad Request when the payload was {}.",
             error_message
+        );
+    }
+}
+
+#[tokio::test]
+async fn create_task_when_fields_are_present_but_empty_then_returns_400() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    let test_cases = vec![
+        ("title=&description=Test+Description", "empty title"),
+        ("title=Test+Title&description=", "empty description"),
+    ];
+    for (invalid_body, description) in test_cases {
+        let response = client
+            .post(&format!("{}/tasks", app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "The API failed to return a 400 Bad Request when the payload was {}.",
+            description
         );
     }
 }
