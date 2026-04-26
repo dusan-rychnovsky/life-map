@@ -1,6 +1,18 @@
+# sbt build outputs
+target/
+project/target/
+project/project/
+
+# IDE
+.idea/
+.idea_modules/
+*.iml
+.bsp/
+.metals/
+.vscode/
+
+# Scala / JVM
 *.class
 *.tasty
 *.log
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
