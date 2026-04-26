@@ -1,4 +1,4 @@
-package cz.dusanrychnovsky.lifemap.model
+package cz.dusanrychnovsky.lifemap.tasks
 
 import zio.json._
 import java.util.UUID

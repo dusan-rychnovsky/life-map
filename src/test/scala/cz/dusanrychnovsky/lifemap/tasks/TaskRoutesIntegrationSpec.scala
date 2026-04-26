@@ -1,11 +1,9 @@
-package cz.dusanrychnovsky.lifemap.routes
+package cz.dusanrychnovsky.lifemap.tasks
 
-import cz.dusanrychnovsky.lifemap.repository.TaskRepository
-import zio._
+import zio.{ZIO, Scope}
 import zio.http._
 import zio.json.DecoderOps
 import zio.test._
-import cz.dusanrychnovsky.lifemap.model.{Task, TaskStatus}
 import java.util.UUID
 
 object TaskRoutesIntegrationSpec extends ZIOSpecDefault:

@@ -1,8 +1,7 @@
-package cz.dusanrychnovsky.lifemap.repository
+package cz.dusanrychnovsky.lifemap.tasks
 
-import zio._
+import zio.ZIO
 import zio.test._
-import cz.dusanrychnovsky.lifemap.model.{Task, TaskStatus}
 import java.util.UUID
 
 object TaskRepositorySpec extends ZIOSpecDefault:

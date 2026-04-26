@@ -1,10 +1,8 @@
-package cz.dusanrychnovsky.lifemap.routes
+package cz.dusanrychnovsky.lifemap.tasks
 
-import cz.dusanrychnovsky.lifemap.repository.TaskRepository
-import zio._
+import zio.ZIO
 import zio.http._
 import zio.json.{DeriveJsonDecoder, DecoderOps, EncoderOps, JsonDecoder}
-import cz.dusanrychnovsky.lifemap.model.{Task, TaskStatus}
 import java.util.UUID
 
 private case class CreateTaskRequest(title: String, description: String)

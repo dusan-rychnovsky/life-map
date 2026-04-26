@@ -1,7 +1,6 @@
-package cz.dusanrychnovsky.lifemap.repository
+package cz.dusanrychnovsky.lifemap.tasks
 
-import zio._
-import cz.dusanrychnovsky.lifemap.model.{Task, TaskStatus}
+import zio.{UIO, ULayer, ZLayer, Ref, Random}
 import java.util.UUID
 
 trait TaskRepository:

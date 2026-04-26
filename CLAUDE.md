@@ -6,31 +6,41 @@
 - ZIO 2.1.14, ZIO HTTP 3.2.0, ZIO JSON 0.7.3
 - Tests: ZIO Test via `sbt test`
 
+Run `sbt test` after every change to guard against regressions. Do not report a task as done until all tests pass.
+
 ## Project layout
+
+Code is organised by domain feature, not by syntactic role (no separate `model/`, `repository/`, `routes/` folders). All files that belong to the same feature live in the same package.
 
 ```
 src/main/scala/cz/dusanrychnovsky/lifemap/
-  Main.scala                  # entry point, wires layers + starts server (port 8080)
-  model/Task.scala            # Task case class, TaskStatus enum, JSON codecs
-  repository/TaskRepository.scala   # trait + in-memory implementation
-  routes/TaskRoutes.scala     # HTTP routes, request/response types
+  Main.scala        # entry point, wires layers + starts server (port 8080)
+  tasks/
+    Task.scala            # Task case class, TaskStatus enum, JSON codecs
+    TaskRepository.scala  # trait + in-memory implementation
+    TaskRoutes.scala      # HTTP routes, request/response types
 
 src/test/scala/cz/dusanrychnovsky/lifemap/
-  repository/TaskRepositorySpec.scala          # unit tests for the repository
-  routes/TaskRoutesSpec.scala                  # unit tests for routes (in-process, no server)
-  routes/TaskRoutesIntegrationSpec.scala       # integration tests (real server, real HTTP client)
+  tasks/
+    TaskRepositorySpec.scala          # unit tests for the repository
+    TaskRoutesSpec.scala              # unit tests for routes (in-process, no server)
+    TaskRoutesIntegrationSpec.scala   # integration tests (real server, real HTTP client)
 ```
 
 ## Import conventions
 
-`zio.Task` conflicts with `cz.dusanrychnovsky.lifemap.model.Task`. Two wildcard imports from both packages always produce an ambiguity error in Scala 3 regardless of order. Fix: import the model type explicitly so it shadows the wildcard.
+`zio.Task` is a type alias (the higher-kinded ZIO effect type) and conflicts with our domain `Task` case class. In Scala 3, named imports take precedence over package members, so `import zio._` will shadow the package-level `Task` even when both files are in the same package. Fix: avoid `import zio._` and import only the specific ZIO names each file actually uses, so `zio.Task` never enters scope.
 
 ```scala
-import zio._
-import cz.dusanrychnovsky.lifemap.model.{Task, TaskStatus}  // explicit wins over zio.Task wildcard
+// TaskRepository.scala
+import zio.{UIO, ULayer, ZLayer, Ref, Random}
+
+// TaskRoutes.scala and tests
+import zio.ZIO
+import zio.{ZIO, Scope}   // where Scope is also needed
 ```
 
-`zio.json._` exports a `uuid` identifier that conflicts with `zio.http._`'s path-codec `uuid`. Fix: avoid the `zio.json._` wildcard and import only what is needed.
+`zio.json._` exports a `uuid` identifier that conflicts with `zio.http._`'s path-codec `uuid`. Same fix: avoid the `zio.json._` wildcard.
 
 ```scala
 import zio.json.{DeriveJsonDecoder, DecoderOps, EncoderOps, JsonDecoder}

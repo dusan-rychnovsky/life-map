@@ -1,7 +1,6 @@
 package cz.dusanrychnovsky.lifemap
 
-import cz.dusanrychnovsky.lifemap.repository.TaskRepository
-import cz.dusanrychnovsky.lifemap.routes.TaskRoutes
+import cz.dusanrychnovsky.lifemap.tasks.{TaskRepository, TaskRoutes}
 import zio._
 import zio.http._
 
