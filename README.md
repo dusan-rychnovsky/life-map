@@ -15,6 +15,13 @@ sbt run
 
 The server starts on `http://localhost:8080` by default.
 
+## Running with Docker
+
+```bash
+docker build -t life-map .
+docker run --rm -p 8080:8080 life-map
+```
+
 ## API
 
 ### Create a task

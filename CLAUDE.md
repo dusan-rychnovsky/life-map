@@ -8,6 +8,8 @@
 
 Run `sbt test` after every change to guard against regressions. Do not report a task as done until all tests pass.
 
+After every change, also update `CLAUDE.md` and `README.md` so they stay in sync with the code. CLAUDE.md captures project-level conventions and non-obvious gotchas for future Claude sessions; README.md is the user-facing docs (requirements, run/build instructions, API). If a change touches the stack, layout, conventions, build/run flow, or public API, the corresponding doc must move with it in the same task — do not defer.
+
 ## Project layout
 
 Code is organised by domain feature, not by syntactic role (no separate `model/`, `repository/`, `routes/` folders). All files that belong to the same feature live in the same package.
@@ -65,3 +67,14 @@ test("...") { ... }.provide(TaskRepository.layer, Scope.default)
 ## Error handling in routes
 
 Route handlers use `ZIO[R, Response, Response]` internally — both success and error paths produce a `Response` — then collapse to `ZIO[R, Nothing, Response]` with `.merge`. This keeps `Routes[R, Nothing]` as the public type.
+
+## Docker
+
+Multi-stage `Dockerfile` at the repo root: `sbtscala/scala-sbt` builder runs `sbt package` and stages the application jar plus all runtime-dependency jars (resolved via `sbt 'export Runtime / dependencyClasspath'`) into `/dist/lib`; an `eclipse-temurin:21-jre` runtime stage runs them with `java -cp '/app/lib/*' cz.dusanrychnovsky.lifemap.Main`. No sbt plugins required.
+
+```
+docker build -t life-map .
+docker run --rm -p 8080:8080 life-map
+```
+
+The builder image tag pins a different sbt version than `project/build.properties` (currently 1.12.9 vs 1.10.2). That is intentional — sbt's launcher reads `project/build.properties` and bootstraps the project's pinned version, so the tag's bundled sbt is irrelevant. Don't "fix" the tag to match 1.10.2; published `sbtscala/scala-sbt` tags for older sbt versions get pruned.

@@ -1,0 +1,11 @@
+target/
+project/target/
+project/project/
+.git/
+.idea/
+.idea_modules/
+.bsp/
+.metals/
+.vscode/
+*.iml
+*.log
