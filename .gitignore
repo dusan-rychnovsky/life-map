@@ -16,3 +16,6 @@ project/project/
 *.tasty
 *.log
 hs_err_pid*
+
+# Local environment overrides
+.env

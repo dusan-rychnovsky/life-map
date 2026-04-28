@@ -1,6 +1,6 @@
 package cz.dusanrychnovsky.lifemap.tasks
 
-import zio.{ZIO, Scope}
+import zio.{Scope, ZIO}
 import zio.http._
 import zio.json.DecoderOps
 import zio.test._
@@ -12,6 +12,7 @@ object TaskRoutesIntegrationSpec extends ZIOSpecDefault:
 
     test("POST /tasks returns 201 Created with the new task") {
       for
+        _        <- PostgresTestSupport.truncate
         port     <- Server.install(TaskRoutes.routes)
         client   <- ZIO.service[Client]
         response <- client(Request(
@@ -28,6 +29,7 @@ object TaskRoutesIntegrationSpec extends ZIOSpecDefault:
 
     test("GET /tasks returns 200 OK with JSON array") {
       for
+        _        <- PostgresTestSupport.truncate
         port     <- Server.install(TaskRoutes.routes)
         client   <- ZIO.service[Client]
         _        <- client(Request(
@@ -44,6 +46,7 @@ object TaskRoutesIntegrationSpec extends ZIOSpecDefault:
 
     test("PATCH /tasks/:id/status returns 200 OK with updated task") {
       for
+        _           <- PostgresTestSupport.truncate
         port        <- Server.install(TaskRoutes.routes)
         client      <- ZIO.service[Client]
         createResp  <- client(Request(
@@ -68,6 +71,7 @@ object TaskRoutesIntegrationSpec extends ZIOSpecDefault:
     test("PATCH /tasks/:id/status returns 404 for unknown id") {
       val id = UUID.randomUUID()
       for
+        _        <- PostgresTestSupport.truncate
         port     <- Server.install(TaskRoutes.routes)
         client   <- ZIO.service[Client]
         response <- client(Request(
@@ -78,9 +82,9 @@ object TaskRoutesIntegrationSpec extends ZIOSpecDefault:
       yield assertTrue(response.status == Status.NotFound)
     },
 
-  ).provide(
+  ).provideShared(
     Server.defaultWithPort(0),
-    TaskRepository.layer,
+    PostgresTestSupport.layer,
     Client.default,
     Scope.default,
-  )
+  ) @@ TestAspect.sequential

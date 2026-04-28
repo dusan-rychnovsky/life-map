@@ -15,6 +15,9 @@ private object UpdateStatusRequest:
 
 object TaskRoutes:
 
+  private def repoFailure(t: Throwable): Response =
+    Response.internalServerError(s"Repository error: ${t.getMessage}")
+
   val routes: Routes[TaskRepository, Nothing] = Routes(
 
     Method.POST / "tasks" -> handler { (req: Request) =>
@@ -23,6 +26,7 @@ object TaskRoutes:
         createReq <- ZIO.fromEither(body.fromJson[CreateTaskRequest])
                        .mapError(msg => Response.badRequest(msg))
         task      <- ZIO.serviceWithZIO[TaskRepository](_.create(createReq.title, createReq.description))
+                       .mapError(repoFailure)
       yield Response.json(task.toJson).copy(status = Status.Created))
         .merge
     },
@@ -30,6 +34,7 @@ object TaskRoutes:
     Method.GET / "tasks" -> handler {
       ZIO.serviceWithZIO[TaskRepository](_.getAll)
         .map(tasks => Response.json(tasks.toJson))
+        .catchAll(t => ZIO.succeed(repoFailure(t)))
     },
 
     Method.PATCH / "tasks" / uuid("id") / "status" -> handler { (id: UUID, req: Request) =>
@@ -38,6 +43,7 @@ object TaskRoutes:
         updateReq <- ZIO.fromEither(body.fromJson[UpdateStatusRequest])
                        .mapError(msg => Response.badRequest(msg))
         maybeTask <- ZIO.serviceWithZIO[TaskRepository](_.updateStatus(id, updateReq.status))
+                       .mapError(repoFailure)
         response  <- ZIO.fromOption(maybeTask)
                        .mapBoth(_ => Response.notFound(s"Task not found: $id"), task => Response.json(task.toJson))
       yield response)

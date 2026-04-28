@@ -1,6 +1,6 @@
 package cz.dusanrychnovsky.lifemap.tasks
 
-import zio.{ZIO, Scope}
+import zio.{Scope, ZIO}
 import zio.http._
 import zio.json.DecoderOps
 import zio.test._
@@ -20,6 +20,7 @@ object TaskRoutesSpec extends ZIOSpecDefault:
           body = Body.fromString("""{"title":"Buy groceries","description":"Milk and eggs"}"""),
         )
         for
+          _        <- PostgresTestSupport.truncate
           response <- routes(req)
           body     <- response.body.asString
           task     <- ZIO.fromEither(body.fromJson[Task])
@@ -27,7 +28,7 @@ object TaskRoutesSpec extends ZIOSpecDefault:
               assertTrue(task.title == "Buy groceries") &&
               assertTrue(task.description == "Milk and eggs") &&
               assertTrue(task.status == TaskStatus.New)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
 
       test("returns 400 Bad Request for invalid JSON") {
         val req = Request(
@@ -36,21 +37,23 @@ object TaskRoutesSpec extends ZIOSpecDefault:
           body = Body.fromString("not-json"),
         )
         for
+          _        <- PostgresTestSupport.truncate
           response <- routes(req)
         yield assertTrue(response.status == Status.BadRequest)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
     ),
 
     suite("GET /tasks")(
       test("returns 200 OK with a JSON array") {
         val req = Request.get(url"http://localhost/tasks")
         for
+          _        <- PostgresTestSupport.truncate
           response <- routes(req)
           body     <- response.body.asString
           tasks    <- ZIO.fromEither(body.fromJson[List[Task]])
         yield assertTrue(response.status == Status.Ok) &&
               assertTrue(tasks.isEmpty)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
 
       test("includes tasks that were previously created") {
         val postReq = Request(
@@ -60,12 +63,13 @@ object TaskRoutesSpec extends ZIOSpecDefault:
         )
         val getReq = Request.get(url"http://localhost/tasks")
         for
+          _        <- PostgresTestSupport.truncate
           _        <- routes(postReq)
           response <- routes(getReq)
           body     <- response.body.asString
           tasks    <- ZIO.fromEither(body.fromJson[List[Task]])
         yield assertTrue(tasks.exists(_.title == "Walk the dog"))
-      }.provide(TaskRepository.layer, Scope.default),
+      },
     ),
 
     suite("PATCH /tasks/:id/status")(
@@ -76,6 +80,7 @@ object TaskRoutesSpec extends ZIOSpecDefault:
           body = Body.fromString("""{"title":"Read a book","description":"Fiction"}"""),
         )
         for
+          _          <- PostgresTestSupport.truncate
           createResp <- routes(postReq)
           createBody <- createResp.body.asString
           task       <- ZIO.fromEither(createBody.fromJson[Task])
@@ -90,7 +95,7 @@ object TaskRoutesSpec extends ZIOSpecDefault:
         yield assertTrue(patchResp.status == Status.Ok) &&
               assertTrue(updated.id == task.id) &&
               assertTrue(updated.status == TaskStatus.Active)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
 
       test("returns 404 Not Found for an unknown task id") {
         val id  = UUID.randomUUID()
@@ -100,9 +105,10 @@ object TaskRoutesSpec extends ZIOSpecDefault:
           body = Body.fromString("""{"status":"active"}"""),
         )
         for
+          _        <- PostgresTestSupport.truncate
           response <- routes(req)
         yield assertTrue(response.status == Status.NotFound)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
 
       test("returns 400 Bad Request for an invalid status value") {
         val postReq = Request(
@@ -111,6 +117,7 @@ object TaskRoutesSpec extends ZIOSpecDefault:
           body = Body.fromString("""{"title":"Task","description":"Desc"}"""),
         )
         for
+          _          <- PostgresTestSupport.truncate
           createResp <- routes(postReq)
           createBody <- createResp.body.asString
           task       <- ZIO.fromEither(createBody.fromJson[Task])
@@ -121,6 +128,6 @@ object TaskRoutesSpec extends ZIOSpecDefault:
                         )
           patchResp  <- routes(patchReq)
         yield assertTrue(patchResp.status == Status.BadRequest)
-      }.provide(TaskRepository.layer, Scope.default),
+      },
     ),
-  )
+  ).provideShared(PostgresTestSupport.layer, Scope.default) @@ TestAspect.sequential
